@@ -1,0 +1,1517 @@
+```html
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>肉鴿掛機遊戲</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#0a0a0a;overflow:hidden;font-family:'Microsoft JhengHei',sans-serif;}
+#gameContainer{position:relative;width:100vw;height:100vh;display:flex;justify-content:center;align-items:center;}
+#gameCanvas{background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);border:3px solid #e94560;box-shadow:0 0 50px rgba(233,69,96,0.5);}
+#ui{position:absolute;top:10px;left:10px;color:#fff;font-size:14px;text-shadow:2px 2px 4px rgba(0,0,0,0.8);}
+#healthBar{width:300px;height:25px;background:#333;border:2px solid #e94560;border-radius:12px;overflow:hidden;margin:5px 0;}
+#healthFill{height:100%;background:linear-gradient(90deg,#e94560,#ff6b6b);transition:width 0.3s;position:relative;}
+#shieldFill{position:absolute;top:0;right:0;height:100%;background:linear-gradient(90deg,#4facfe,#00f2fe);opacity:0.7;}
+#expBar{width:300px;height:15px;background:#333;border:2px solid #4facfe;border-radius:8px;overflow:hidden;margin:5px 0;}
+#expFill{height:100%;background:linear-gradient(90deg,#4facfe,#00f2fe);transition:width 0.3s;}
+#stats{background:rgba(0,0,0,0.7);padding:15px;border-radius:10px;border:1px solid #4facfe;margin-top:10px;}
+#stats div{margin:3px 0;}
+#buffs{position:absolute;top:10px;right:10px;display:flex;flex-wrap:wrap;gap:5px;max-width:400px;justify-content:flex-end;}
+.buff{background:rgba(0,0,0,0.8);border:2px solid #ffd700;border-radius:8px;padding:5px 10px;color:#ffd700;font-size:12px;animation:buffPulse 1s infinite;}
+@keyframes buffPulse{0%,100%{box-shadow:0 0 5px #ffd700;}50%{box-shadow:0 0 15px #ffd700;}}
+#equipment{position:absolute;bottom:10px;left:10px;display:flex;flex-wrap:wrap;gap:5px;max-width:600px;}
+.equip{background:rgba(0,0,0,0.8);border:2px solid #9b59b6;border-radius:8px;padding:8px 12px;color:#9b59b6;font-size:11px;}
+#skillCD{position:absolute;bottom:10px;right:10px;background:rgba(0,0,0,0.8);border:2px solid #e94560;border-radius:10px;padding:15px;color:#fff;}
+#levelUp{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.95);border:3px solid #ffd700;border-radius:20px;padding:30px;display:none;z-index:100;text-align:center;color:#fff;min-width:500px;}
+#levelUp h2{color:#ffd700;margin-bottom:20px;font-size:28px;text-shadow:0 0 10px #ffd700;}
+.buffChoice{background:linear-gradient(135deg,#1a1a2e,#16213e);border:2px solid #4facfe;border-radius:15px;padding:20px;margin:10px;cursor:pointer;transition:all 0.3s;display:inline-block;width:140px;vertical-align:top;}
+.buffChoice:hover{transform:scale(1.1);border-color:#ffd700;box-shadow:0 0 20px rgba(255,215,0,0.5);}
+#timer{position:absolute;top:10px;left:50%;transform:translateX(-50%);color:#fff;font-size:18px;background:rgba(0,0,0,0.7);padding:10px 20px;border-radius:10px;border:2px solid #4facfe;}
+#waveInfo{position:absolute;top:50px;left:50%;transform:translateX(-50%);color:#ff0;font-size:16px;background:rgba(0,0,0,0.7);padding:8px 16px;border-radius:8px;border:2px solid #ff0;display:none;}
+#saveLoad{position:absolute;bottom:80px;right:10px;display:flex;gap:10px;}
+#saveLoad button{background:linear-gradient(135deg,#667eea,#764ba2);border:none;color:#fff;padding:10px 20px;border-radius:8px;cursor:pointer;font-size:14px;transition:all 0.3s;}
+#saveLoad button:hover{transform:scale(1.05);box-shadow:0 0 15px rgba(102,126,234,0.7);}
+#deathScreen{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);display:none;justify-content:center;align-items:center;flex-direction:column;z-index:200;}
+#deathScreen h1{color:#e94560;font-size:48px;margin-bottom:20px;text-shadow:0 0 20px #e94560;}
+#deathScreen p{color:#fff;font-size:18px;margin:10px 0;}
+#deathScreen button{background:linear-gradient(135deg,#e94560,#ff6b6b);border:none;color:#fff;padding:15px 40px;border-radius:10px;cursor:pointer;font-size:18px;margin-top:20px;transition:all 0.3s;}
+#deathScreen button:hover{transform:scale(1.1);box-shadow:0 0 20px rgba(233,69,96,0.7);}
+#carryOver{color:#4facfe;font-size:16px;margin-top:15px;}
+.damage{position:absolute;color:#ff0;font-size:20px;font-weight:bold;pointer-events:none;animation:floatUp 1s forwards;text-shadow:2px 2px 4px #000;}
+.critDamage{color:#ff0000;font-size:30px;}
+@keyframes floatUp{0%{opacity:1;transform:translateY(0);}100%{opacity:0;transform:translateY(-50px);}}
+#enemyCount{position:absolute;top:90px;left:50%;transform:translateX(-50%);color:#fff;font-size:14px;background:rgba(0,0,0,0.7);padding:5px 15px;border-radius:5px;}
+#difficultyMeter{position:absolute;top:120px;left:50%;transform:translateX(-50%);width:200px;height:10px;background:#333;border-radius:5px;overflow:hidden;}
+#difficultyFill{height:100%;background:linear-gradient(90deg,#00ff00,#ffff00,#ff0000);transition:width 0.5s;}
+#instructions{position:absolute;bottom:150px;left:10px;background:rgba(0,0,0,0.7);padding:10px;border-radius:8px;color:#aaa;font-size:12px;border:1px solid #333;}
+</style>
+</head>
+<body>
+<div id="gameContainer">
+<canvas id="gameCanvas"></canvas>
+<div id="ui">
+<div id="levelDisplay">LV.1</div>
+<div id="healthBar"><div id="healthFill" style="width:100%"><div id="shieldFill" style="width:0%"></div></div></div>
+<div id="healthText">HP: 250 / 250</div>
+<div id="expBar"><div id="expFill" style="width:0%"></div></div>
+<div id="expText">EXP: 0 / 100</div>
+<div id="stats">
+<div>攻擊力: <span id="atkStat">65</span></div>
+<div>防禦力: <span id="defStat">100</span></div>
+<div>爆擊率: <span id="critStat">1%</span></div>
+<div>移動速度: <span id="spdStat">100%</span></div>
+<div>攻擊段數: <span id="hitStat">1</span></div>
+<div>裝備加成: <span id="equipStat">0%</span></div>
+<div>經驗加成: <span id="expBonus">0%</span></div>
+<div>難度倍率: <span id="diffStat">1.0x</span></div>
+</div>
+</div>
+<div id="buffs"></div>
+<div id="equipment"></div>
+<div id="skillCD">
+<div>技能 [K] 雷切</div>
+<div id="skillCDText">就緒</div>
+</div>
+<div id="timer">時間: 00:00</div>
+<div id="waveInfo"></div>
+<div id="enemyCount">敵人: 0</div>
+<div id="difficultyMeter"><div id="difficultyFill" style="width:10%"></div></div>
+<div id="saveLoad">
+<button onclick="saveGame()">存檔</button>
+<button onclick="loadGame()">讀檔</button>
+</div>
+<div id="instructions">
+WASD / 方向鍵 - 移動<br>
+K - 雷切技能<br>
+擊殺敵人獲取經驗與掉落<br>
+<span style="color:#f00">難度隨時間指數增長!</span>
+</div>
+<div id="levelUp">
+<h2>升級！選擇強化</h2>
+<div id="buffChoices"></div>
+<div id="autoSelect">自動選擇: <span id="autoTimer">2.5</span>秒</div>
+</div>
+<div id="deathScreen">
+<h1>你死了</h1>
+<p id="deathStats"></p>
+<div id="carryOver"></div>
+<button onclick="restartGame()">重新開始</button>
+</div>
+</div>
+<script>
+const canvas=document.getElementById('gameCanvas');
+const ctx=canvas.getContext('2d');
+canvas.width=1200;
+canvas.height=800;
+let gameTime=0;
+let gameRunning=true;
+let isPaused=false;
+let difficultyMultiplier=1;
+let carryOverStats={atk:0,hp:0,def:0};
+const keys={};
+const allBuffOptions=[
+{id:1,name:'攻擊力+20%',desc:'攻擊力提升20%',apply:(p)=>{p.atkMult+=0.2;}},
+{id:2,name:'速度+5%',desc:'移動速度提升5%',apply:(p)=>{p.speedMult+=0.05;}},
+{id:3,name:'坦克',desc:'攻擊-30%,生命+60%',apply:(p)=>{p.atkMult-=0.3;p.maxHp*=1.6;p.hp=Math.min(p.hp,p.maxHp);}},
+{id:4,name:'攻擊段數+1',desc:'攻擊段數增加1',apply:(p)=>{p.hitCount+=1;}},
+{id:5,name:'裝備傷害+15%',desc:'裝備魔法傷害+15%',apply:(p)=>{p.equipDmgMult+=0.15;}},
+{id:6,name:'攻速+50%',desc:'攻擊速度+50%',apply:(p)=>{p.atkSpeedMult+=0.5;}},
+{id:7,name:'回復50%HP',desc:'立即回復50%生命',apply:(p)=>{p.hp=Math.min(p.maxHp,p.hp+p.maxHp*0.5);}},
+{id:8,name:'經驗+20%',desc:'經驗獲取+20%',apply:(p)=>{p.expMult+=0.2;}},
+{id:9,name:'狂戰士',desc:'攻擊+40%,速度-10%',apply:(p)=>{p.atkMult+=0.4;p.speedMult-=0.1;}}
+];
+const equipmentList=[
+{id:'shuriken',name:'旋風手裡劍',chance:0.015,color:'#00ff00'},
+{id:'timeRing',name:'時之指戒',chance:0.01,color:'#ffd700'},
+{id:'rasengan',name:'螺旋丸',chance:0.005,color:'#00bfff'},
+{id:'lifeStone',name:'生死之碑',chance:0.00005,color:'#ff00ff'},
+{id:'holyBlade',name:'神祗聖劍',chance:0.008,color:'#ffffff'},
+{id:'divineIce',name:'神之冰',chance:0.005,color:'#87ceeb'},
+{id:'swordArt',name:'萬劍訣',chance:0.015,color:'#333'},
+{id:'fist',name:'拳頭',chance:0.012,color:'#ff4500'}
+];
+const buffDropList=[
+{id:'power',name:'力量',chance:0.015,duration:60,color:'#ff4444'},
+{id:'evilFlower',name:'惡之花',chance:0.015,duration:16,color:'#800080'},
+{id:'hpRegen',name:'生命值I',chance:0.015,duration:30,color:'#00ff00'},
+{id:'godSpeed',name:'神速',chance:0.015,duration:15,color:'#00ffff'},
+{id:'lingXuan',name:'凌玄夜的神力碎片',chance:0.015,duration:60,color:'#ffd700'},
+{id:'miracle',name:'奇蹟之力',chance:0.015,duration:1,color:'#ff00ff'},
+{id:'iceShield',name:'冰愷',chance:0.015,duration:30,color:'#87ceeb'},
+{id:'windThunder',name:'疾風迅雷',chance:0.015,duration:60,color:'#ffff00'},
+{id:'holyHeritage',name:'聖者傳承',chance:0.005,duration:20,color:'#ffffff'},
+{id:'sinFace',name:'罪面',chance:0.005,duration:13,color:'#8b0000'},
+{id:'vortex',name:'漩渦',chance:0.015,duration:30,color:'#4169e1'}
+];
+const enemyAffixes=[
+{id:'swift',name:'迅捷',color:'#00ffff',apply:(e)=>{e.speed*=1.8;e.name='迅捷'+e.name;}},
+{id:'tank',name:'堅韌',color:'#808080',apply:(e)=>{e.hp*=3;e.maxHp*=3;e.name='堅韌'+e.name;}},
+{id:'berserker',name:'狂暴',color:'#ff0000',apply:(e)=>{e.damage*=2.5;e.name='狂暴'+e.name;}},
+{id:'regen',name:'再生',color:'#00ff00',apply:(e)=>{e.regen=true;e.name='再生'+e.name;}},
+{id:'shield',name:'護盾',color:'#4facfe',apply:(e)=>{e.hasShield=true;e.shieldHp=e.maxHp*0.5;e.name='護盾'+e.name;}},
+{id:'split',name:'分裂',color:'#ff00ff',apply:(e)=>{e.canSplit=true;e.name='分裂'+e.name;}},
+{id:'ranged',name:'遠程',color:'#ffa500',apply:(e)=>{e.isRanged=true;e.attackRange=300;e.name='遠程'+e.name;}},
+{id:'vampiric',name:'吸血',color:'#8b0000',apply:(e)=>{e.vampiric=true;e.name='吸血'+e.name;}},
+{id:'explosive',name:'爆炸',color:'#ff4500',apply:(e)=>{e.explosive=true;e.name='爆炸'+e.name;}},
+{id:'aura',name:'強化光環',color:'#ffd700',apply:(e)=>{e.hasAura=true;e.name='強化'+e.name;}},
+{id:'teleport',name:'瞬移',color:'#9400d3',apply:(e)=>{e.canTeleport=true;e.teleportCD=0;e.name='瞬移'+e.name;}},
+{id:'summoner',name:'召喚',color:'#4b0082',apply:(e)=>{e.canSummon=true;e.summonCD=0;e.name='召喚'+e.name;}}
+];
+class Player{
+constructor(){
+this.x=canvas.width/2;
+this.y=canvas.height/2;
+this.radius=20;
+this.baseHp=250;
+this.baseAtk=65;
+this.baseDef=100;
+this.hp=this.baseHp+carryOverStats.hp;
+this.maxHp=this.baseHp+carryOverStats.hp;
+this.atk=this.baseAtk+carryOverStats.atk;
+this.def=this.baseDef+carryOverStats.def;
+this.critRate=0.01;
+this.level=1;
+this.exp=0;
+this.expToLevel=100;
+this.speed=5;
+this.atkMult=1;
+this.speedMult=1;
+this.hitCount=1;
+this.equipDmgMult=1;
+this.atkSpeedMult=1;
+this.expMult=1;
+this.defMult=1;
+this.shield=0;
+this.invincible=false;
+this.invincibleTime=0;
+this.skillCD=0;
+this.skillMaxCD=10;
+this.lastKnifeTime=0;
+this.knifeInterval=5000;
+this.gainedAtk=0;
+this.gainedHp=0;
+this.gainedDef=0;
+this.hasLifeStone=false;
+this.lifeStoneUsed=false;
+this.lifeStoneTimer=0;
+this.activeBuffs={};
+this.equipment=[];
+this.shurikenTimer=0;
+this.timeRingTimer=0;
+this.timeRingBuffTimer=0;
+this.timeRingCycle=0;
+this.rasenganTimer=0;
+this.divineIceTimer=0;
+this.swordArtTimer=0;
+this.fistTimer=0;
+this.holyBladeAngle=0;
+this.lingXuanTimer=0;
+this.lingXuanInvincible=false;
+this.lingXuanBarriers=[];
+this.sinFaceLightning=false;
+this.vortexes=[];
+this.hpRegenTimer=0;
+}
+getAtk(){
+let a=this.atk*this.atkMult;
+if(this.activeBuffs.power)a*=1.1;
+if(this.timeRingBuffTimer>0)a*=1.3;
+if(this.activeBuffs.miracle)a*=6;
+if(this.activeBuffs.sinFace)a*=4.5;
+if(this.lifeStoneTimer>0)a*=2.2;
+return a;
+}
+getDef(){
+let d=this.def*this.defMult;
+if(this.activeBuffs.iceShield)d*=1.2;
+if(this.activeBuffs.holyHeritage)d*=1.5;
+return d;
+}
+getSpeed(){
+let s=this.speed*this.speedMult;
+if(this.activeBuffs.godSpeed)s*=(1.35+Math.random()*0.15);
+if(this.activeBuffs.holyHeritage)s*=2.2;
+if(this.activeBuffs.sinFace)s*=1.4;
+return s;
+}
+takeDamage(dmg){
+if(this.invincible||this.lingXuanInvincible)return;
+let reduction=(this.getDef()/50)*0.0035;
+reduction=Math.min(reduction,0.9);
+let finalDmg=dmg*(1-reduction);
+if(this.activeBuffs.evilFlower)finalDmg*=0.1;
+if(this.shield>0){
+if(this.shield>=finalDmg){
+this.shield-=finalDmg;
+finalDmg=0;
+}else{
+finalDmg-=this.shield;
+this.shield=0;
+}
+}
+this.hp-=finalDmg;
+if(this.hp<=0){
+if(this.hasLifeStone&&!this.lifeStoneUsed){
+this.hp=this.maxHp*0.4;
+this.lifeStoneUsed=true;
+this.lifeStoneTimer=300;
+createFloatingText(this.x,this.y-30,'生死之碑發動!','#ff00ff');
+}else{
+this.die();
+}
+}
+}
+die(){
+gameRunning=false;
+const carryAtk=Math.floor(this.gainedAtk*0.6);
+const carryHp=Math.floor(this.gainedHp*0.6);
+const carryDef=Math.floor(this.gainedDef*0.6);
+carryOverStats.atk+=carryAtk;
+carryOverStats.hp+=carryHp;
+carryOverStats.def+=carryDef;
+document.getElementById('deathScreen').style.display='flex';
+document.getElementById('deathStats').innerHTML=`存活時間: ${formatTime(gameTime)}<br>達到等級: ${this.level}<br>總擊殺數: ${totalKills}<br>最終難度: ${difficultyMultiplier.toFixed(1)}x`;
+document.getElementById('carryOver').innerHTML=`繼承屬性 (60%):<br>攻擊力 +${carryAtk} (總計: ${carryOverStats.atk})<br>生命值 +${carryHp} (總計: ${carryOverStats.hp})<br>防禦力 +${carryDef} (總計: ${carryOverStats.def})`;
+}
+gainExp(amount){
+const gained=amount*this.expMult;
+this.exp+=gained;
+while(this.exp>=this.expToLevel&&this.expToLevel<=25000){
+this.exp-=this.expToLevel;
+this.levelUp();
+}
+}
+levelUp(){
+this.level++;
+this.maxHp+=100;
+this.hp=Math.min(this.hp+100,this.maxHp);
+this.atk+=50;
+this.def+=45;
+this.gainedHp+=100;
+this.gainedAtk+=50;
+this.gainedDef+=45;
+if(this.level<=2){
+this.expToLevel=150;
+}else{
+this.expToLevel=Math.min(25000,Math.floor(this.expToLevel*1.55));
+}
+showLevelUpChoices();
+}
+useSkill(){
+if(this.skillCD>0)return;
+this.invincible=true;
+this.invincibleTime=1.6;
+this.skillCD=this.skillMaxCD;
+if(this.activeBuffs.holyHeritage)this.skillCD*=0.85;
+const angle=Math.atan2(keys.lastMoveY||0,keys.lastMoveX||1);
+const dashDist=200;
+const targetX=this.x+Math.cos(angle)*dashDist;
+const targetY=this.y+Math.sin(angle)*dashDist;
+afterimages.push({x:this.x,y:this.y,alpha:1,color:'#00ffff'});
+for(let i=0;i<10;i++){
+lightningEffects.push({x:this.x+Math.cos(angle)*i*20,y:this.y+Math.sin(angle)*i*20,life:0.5});
+}
+this.x=Math.max(this.radius,Math.min(canvas.width-this.radius,targetX));
+this.y=Math.max(this.radius,Math.min(canvas.height-this.radius,targetY));
+enemies.forEach(e=>{
+const dx=e.x-this.x;
+const dy=e.y-this.y;
+const dist=Math.sqrt(dx*dx+dy*dy);
+if(dist<100){
+const dmg=this.getAtk()*1.6*this.hitCount;
+e.takeDamage(dmg,true);
+e.stunTime=3;
+e.slowTime=5.5;
+e.slowAmount=0.1;
+}
+});
+}
+update(dt){
+const spd=this.getSpeed();
+let moveX=0,moveY=0;
+if(keys['w']||keys['arrowup'])moveY=-1;
+if(keys['s']||keys['arrowdown'])moveY=1;
+if(keys['a']||keys['arrowleft'])moveX=-1;
+if(keys['d']||keys['arrowright'])moveX=1;
+if(moveX!==0||moveY!==0){
+const len=Math.sqrt(moveX*moveX+moveY*moveY);
+moveX/=len;moveY/=len;
+keys.lastMoveX=moveX;
+keys.lastMoveY=moveY;
+this.x+=moveX*spd;
+this.y+=moveY*spd;
+this.x=Math.max(this.radius,Math.min(canvas.width-this.radius,this.x));
+this.y=Math.max(this.radius,Math.min(canvas.height-this.radius,this.y));
+}
+if(this.invincibleTime>0){
+this.invincibleTime-=dt;
+if(this.invincibleTime<=0)this.invincible=false;
+}
+if(this.skillCD>0)this.skillCD-=dt;
+if(this.lifeStoneTimer>0)this.lifeStoneTimer-=dt;
+if(this.timeRingBuffTimer>0)this.timeRingBuffTimer-=dt;
+this.updateBuffs(dt);
+this.updateEquipment(dt);
+}
+updateBuffs(dt){
+for(let id in this.activeBuffs){
+this.activeBuffs[id]-=dt;
+if(this.activeBuffs[id]<=0){
+delete this.activeBuffs[id];
+if(id==='iceShield')this.shield=0;
+if(id==='sinFace')this.sinFaceLightning=false;
+}
+}
+if(this.activeBuffs.hpRegen){
+this.hpRegenTimer+=dt;
+if(this.hpRegenTimer>=5){
+this.hp=Math.min(this.maxHp,this.hp+this.maxHp*0.02);
+this.hpRegenTimer=0;
+}
+}
+if(this.activeBuffs.lingXuan){
+this.lingXuanTimer+=dt;
+if(this.lingXuanTimer>=3){
+this.lingXuanInvincible=true;
+this.lingXuanBarriers.push({x:this.x,y:this.y,life:2,size:60});
+setTimeout(()=>{this.lingXuanInvincible=false;},1200);
+this.lingXuanTimer=0;
+}
+}
+if(this.activeBuffs.sinFace)this.sinFaceLightning=true;
+if(this.activeBuffs.vortex){
+if(this.vortexes.length<3&&Math.random()<0.02){
+this.vortexes.push({x:Math.random()*canvas.width,y:Math.random()*canvas.height,radius:80,life:10});
+}
+}
+this.vortexes=this.vortexes.filter(v=>{v.life-=dt;return v.life>0;});
+this.lingXuanBarriers=this.lingXuanBarriers.filter(b=>{b.life-=dt;return b.life>0;});
+}
+updateEquipment(dt){
+if(this.equipment.includes('shuriken')){
+this.shurikenTimer+=dt*1000;
+if(this.shurikenTimer>=1500/this.atkSpeedMult){
+for(let i=0;i<3;i++){
+let target=findClosestEnemy(this.x,this.y);
+if(target){
+projectiles.push({type:'shuriken',x:this.x,y:this.y,target:target,damage:this.getAtk()*0.355*this.equipDmgMult,speed:12,angle:0,life:5});
+}
+}
+this.shurikenTimer=0;
+}
+}
+if(this.equipment.includes('timeRing')){
+this.timeRingTimer+=dt;
+if(this.timeRingTimer>=2){
+this.hp=Math.min(this.maxHp,this.hp+this.maxHp*0.01);
+this.timeRingTimer=0;
+}
+this.timeRingCycle+=dt;
+if(this.timeRingCycle>=15){
+this.timeRingBuffTimer=8;
+this.timeRingCycle=0;
+createFloatingText(this.x,this.y-40,'攻擊力+30%!','#ffd700');
+}
+}
+if(this.equipment.includes('rasengan')){
+this.rasenganTimer+=dt;
+if(this.rasenganTimer>=8){
+projectiles.push({type:'rasengan',x:this.x,y:this.y,vx:keys.lastMoveX||1,vy:keys.lastMoveY||0,damage:this.getAtk()*2*this.equipDmgMult,life:5,radius:30});
+this.rasenganTimer=0;
+}
+}
+if(this.equipment.includes('holyBlade')){
+this.holyBladeAngle+=dt*(Math.PI*2/15);
+}
+if(this.equipment.includes('divineIce')){
+this.divineIceTimer+=dt*1000;
+if(this.divineIceTimer>=500/this.atkSpeedMult){
+const angle=Math.random()*Math.PI*2;
+projectiles.push({type:'ice',x:this.x,y:this.y,vx:Math.cos(angle)*10,vy:Math.sin(angle)*10,damage:this.getAtk()*1.8*this.equipDmgMult,freezeTime:3.2,life:3});
+this.divineIceTimer=0;
+}
+}
+if(this.equipment.includes('swordArt')){
+this.swordArtTimer+=dt*1000;
+if(this.swordArtTimer>=1200/this.atkSpeedMult){
+for(let i=0;i<20;i++){
+const angle=(Math.PI*2/20)*i;
+projectiles.push({type:'blackSword',x:this.x,y:this.y,vx:Math.cos(angle)*8,vy:Math.sin(angle)*8,damage:this.getAtk()*0.5*this.equipDmgMult,globalDmg:Math.random()<0.01,life:2});
+}
+this.swordArtTimer=0;
+}
+}
+if(this.equipment.includes('fist')){
+this.fistTimer+=dt;
+if(this.fistTimer>=20){
+fists.push({x:this.x,y:this.y,vx:(Math.random()-0.5)*10,vy:(Math.random()-0.5)*10,life:40,damage:this.getAtk()*0.8*this.equipDmgMult});
+this.fistTimer=0;
+}
+}
+}
+draw(){
+ctx.save();
+if(this.invincible||this.lingXuanInvincible){
+ctx.globalAlpha=0.5+Math.sin(Date.now()*0.02)*0.3;
+ctx.shadowColor='#00ffff';
+ctx.shadowBlur=30;
+}
+const gradient=ctx.createRadialGradient(this.x,this.y,0,this.x,this.y,this.radius);
+gradient.addColorStop(0,'#4facfe');
+gradient.addColorStop(1,'#00f2fe');
+ctx.fillStyle=gradient;
+ctx.beginPath();
+ctx.arc(this.x,this.y,this.radius,0,Math.PI*2);
+ctx.fill();
+ctx.strokeStyle='#fff';
+ctx.lineWidth=3;
+ctx.stroke();
+if(this.sinFaceLightning){
+ctx.strokeStyle='#ffff00';
+ctx.lineWidth=2;
+for(let i=0;i<8;i++){
+const angle=(Math.PI*2/8)*i+Date.now()*0.005;
+const r=this.radius+20+Math.sin(Date.now()*0.01+i)*10;
+ctx.beginPath();
+ctx.moveTo(this.x+Math.cos(angle)*(this.radius+5),this.y+Math.sin(angle)*(this.radius+5));
+for(let j=0;j<5;j++){
+const jr=this.radius+5+(r-this.radius-5)*(j/4);
+const jangle=angle+(Math.random()-0.5)*0.3;
+ctx.lineTo(this.x+Math.cos(jangle)*jr,this.y+Math.sin(jangle)*jr);
+}
+ctx.stroke();
+}
+}
+if(this.equipment.includes('holyBlade')){
+ctx.save();
+ctx.translate(this.x,this.y);
+ctx.rotate(this.holyBladeAngle);
+const swordDist=60;
+ctx.fillStyle='#ffffff';
+ctx.shadowColor='#ffd700';
+ctx.shadowBlur=20;
+ctx.beginPath();
+ctx.moveTo(swordDist,-5);
+ctx.lineTo(swordDist+40,0);
+ctx.lineTo(swordDist,5);
+ctx.closePath();
+ctx.fill();
+ctx.restore();
+}
+ctx.restore();
+}
+}
+class Enemy{
+constructor(type,x,y,isSpawned=false){
+this.type=type;
+this.x=x;
+this.y=y;
+this.stunTime=0;
+this.slowTime=0;
+this.slowAmount=1;
+this.freezeTime=0;
+this.affixes=[];
+this.name='';
+this.regen=false;
+this.hasShield=false;
+this.shieldHp=0;
+this.canSplit=false;
+this.isRanged=false;
+this.attackRange=0;
+this.attackCD=0;
+this.vampiric=false;
+this.explosive=false;
+this.hasAura=false;
+this.canTeleport=false;
+this.teleportCD=0;
+this.canSummon=false;
+this.summonCD=0;
+this.isSpawned=isSpawned;
+const baseScale=Math.pow(1.08,gameTime/10);
+const expScale=Math.pow(1.5,gameTime/60);
+const timeScale=baseScale*expScale*difficultyMultiplier;
+switch(type){
+case'normal':
+this.radius=15+Math.min(gameTime/60,10);
+this.hp=50*timeScale;
+this.maxHp=this.hp;
+this.speed=2+Math.random()+gameTime/120;
+this.damage=10*timeScale;
+this.exp=10+gameTime/10;
+this.color='#e74c3c';
+this.name='小怪';
+break;
+case'elite':
+this.radius=25+Math.min(gameTime/40,15);
+this.hp=300*timeScale;
+this.maxHp=this.hp;
+this.speed=2.5+Math.random()*0.5+gameTime/100;
+this.damage=35*timeScale;
+this.exp=50+gameTime/5;
+this.color='#9b59b6';
+this.name='精英';
+if(gameTime>30&&Math.random()<0.5+gameTime/300){
+this.addRandomAffix();
+}
+if(gameTime>120&&Math.random()<0.3){
+this.addRandomAffix();
+}
+break;
+case'boss':
+this.radius=45+Math.min(gameTime/30,25);
+this.hp=1500*timeScale;
+this.maxHp=this.hp;
+this.speed=1.8+Math.random()*0.5+gameTime/150;
+this.damage=80*timeScale;
+this.exp=200+gameTime/2;
+this.color='#e67e22';
+this.name='BOSS';
+for(let i=0;i<Math.min(3,1+Math.floor(gameTime/60));i++){
+if(Math.random()<0.7)this.addRandomAffix();
+}
+break;
+case'godBoss':
+this.radius=70+Math.min(gameTime/20,40);
+this.hp=8000*timeScale;
+this.maxHp=this.hp;
+this.speed=1.5+Math.random()*0.3+gameTime/200;
+this.damage=150*timeScale;
+this.exp=1000+gameTime;
+this.color='#f1c40f';
+this.name='神級BOSS';
+for(let i=0;i<Math.min(5,2+Math.floor(gameTime/45));i++){
+this.addRandomAffix();
+}
+this.hasShield=true;
+this.shieldHp=this.maxHp*0.3;
+break;
+case'minion':
+this.radius=10;
+this.hp=20*timeScale;
+this.maxHp=this.hp;
+this.speed=3+Math.random();
+this.damage=5*timeScale;
+this.exp=5;
+this.color='#95a5a6';
+this.name='召喚物';
+break;
+}
+}
+addRandomAffix(){
+const available=enemyAffixes.filter(a=>!this.affixes.includes(a.id));
+if(available.length>0){
+const affix=available[Math.floor(Math.random()*available.length)];
+this.affixes.push(affix.id);
+affix.apply(this);
+}
+}
+takeDamage(dmg,isCrit=false){
+let finalDmg=dmg;
+let crit=false;
+if(!isCrit&&Math.random()<player.critRate){
+finalDmg*=25*Math.random();
+crit=true;
+}
+if(this.hasShield&&this.shieldHp>0){
+if(this.shieldHp>=finalDmg){
+this.shieldHp-=finalDmg;
+createFloatingText(this.x,this.y-this.radius,'護盾!','#4facfe');
+return;
+}else{
+finalDmg-=this.shieldHp;
+this.shieldHp=0;
+createFloatingText(this.x,this.y-this.radius,'護盾破碎!','#ff0000');
+}
+}
+this.hp-=finalDmg;
+createFloatingText(this.x,this.y-this.radius,Math.floor(finalDmg).toString(),crit?'#ff0000':'#ffff00',crit);
+if(this.hp<=0)this.die();
+}
+die(){
+player.gainExp(this.exp);
+totalKills++;
+if(this.canSplit&&!this.isSpawned){
+for(let i=0;i<3;i++){
+const angle=(Math.PI*2/3)*i;
+const newE=new Enemy('normal',this.x+Math.cos(angle)*30,this.y+Math.sin(angle)*30,true);
+newE.hp*=0.5;
+newE.maxHp=newE.hp;
+enemies.push(newE);
+}
+}
+if(this.explosive){
+enemies.forEach(e=>{
+if(e!==this){
+const dist=Math.sqrt((e.x-this.x)**2+(e.y-this.y)**2);
+if(dist<100)e.takeDamage(this.maxHp*0.2);
+}
+});
+const distToPlayer=Math.sqrt((player.x-this.x)**2+(player.y-this.y)**2);
+if(distToPlayer<100)player.takeDamage(this.damage*2);
+for(let i=0;i<15;i++){
+particles.push({x:this.x,y:this.y,vx:(Math.random()-0.5)*15,vy:(Math.random()-0.5)*15,life:1,color:'#ff4500',size:8});
+}
+}
+this.dropLoot();
+const idx=enemies.indexOf(this);
+if(idx>-1)enemies.splice(idx,1);
+for(let i=0;i<10;i++){
+particles.push({x:this.x,y:this.y,vx:(Math.random()-0.5)*5,vy:(Math.random()-0.5)*5,life:1,color:this.color,size:5});
+}
+}
+dropLoot(){
+const dropMult=1+this.affixes.length*0.5;
+equipmentList.forEach(eq=>{
+if(Math.random()<eq.chance*dropMult&&!player.equipment.includes(eq.id)){
+player.equipment.push(eq.id);
+if(eq.id==='lifeStone')player.hasLifeStone=true;
+createFloatingText(this.x,this.y-50,'獲得: '+eq.name,eq.color);
+updateEquipmentUI();
+}
+});
+buffDropList.forEach(bf=>{
+if(Math.random()<bf.chance*dropMult){
+player.activeBuffs[bf.id]=bf.duration;
+createFloatingText(this.x,this.y-70,'BUFF: '+bf.name,bf.color);
+if(bf.id==='iceShield')player.shield=player.maxHp*0.35;
+if(bf.id==='holyHeritage')player.shield+=player.maxHp*3;
+updateBuffUI();
+}
+});
+}
+update(dt){
+if(this.freezeTime>0){this.freezeTime-=dt;return;}
+if(this.stunTime>0){this.stunTime-=dt;return;}
+if(this.regen){
+this.hp=Math.min(this.maxHp,this.hp+this.maxHp*0.02*dt);
+}
+if(this.hasShield&&this.shieldHp<=0&&Math.random()<0.001){
+this.shieldHp=this.maxHp*0.2;
+}
+let spd=this.speed;
+if(this.slowTime>0){
+spd*=this.slowAmount;
+this.slowTime-=dt;
+}
+const dx=player.x-this.x;
+const dy=player.y-this.y;
+const dist=Math.sqrt(dx*dx+dy*dy);
+if(this.canTeleport){
+this.teleportCD-=dt;
+if(this.teleportCD<=0&&dist>200){
+const angle=Math.random()*Math.PI*2;
+const teleportDist=100+Math.random()*100;
+this.x=player.x+Math.cos(angle)*teleportDist;
+this.y=player.y+Math.sin(angle)*teleportDist;
+this.x=Math.max(this.radius,Math.min(canvas.width-this.radius,this.x));
+this.y=Math.max(this.radius,Math.min(canvas.height-this.radius,this.y));
+this.teleportCD=3+Math.random()*2;
+for(let i=0;i<10;i++){
+particles.push({x:this.x,y:this.y,vx:(Math.random()-0.5)*10,vy:(Math.random()-0.5)*10,life:0.5,color:'#9400d3',size:6});
+}
+}
+}
+if(this.canSummon){
+this.summonCD-=dt;
+if(this.summonCD<=0&&enemies.length<200){
+for(let i=0;i<3;i++){
+const angle=(Math.PI*2/3)*i;
+enemies.push(new Enemy('minion',this.x+Math.cos(angle)*50,this.y+Math.sin(angle)*50,true));
+}
+this.summonCD=5+Math.random()*3;
+}
+}
+if(this.isRanged&&dist<this.attackRange&&dist>50){
+this.attackCD-=dt;
+if(this.attackCD<=0){
+enemyProjectiles.push({x:this.x,y:this.y,vx:dx/dist*8,vy:dy/dist*8,damage:this.damage*0.5,life:3,color:this.color});
+this.attackCD=1.5;
+}
+if(dist<this.attackRange*0.8){
+this.x-=dx/dist*spd*0.5;
+this.y-=dy/dist*spd*0.5;
+}
+}else{
+if(dist>0){
+this.x+=dx/dist*spd;
+this.y+=dy/dist*spd;
+}
+}
+player.vortexes.forEach(v=>{
+const vdx=v.x-this.x;
+const vdy=v.y-this.y;
+const vdist=Math.sqrt(vdx*vdx+vdy*vdy);
+if(vdist<v.radius*2&&vdist>0){
+this.x+=vdx/vdist*3;
+this.y+=vdy/vdist*3;
+}
+});
+player.lingXuanBarriers.forEach(b=>{
+const bdx=this.x-b.x;
+const bdy=this.y-b.y;
+if(Math.abs(bdx)<b.size&&Math.abs(bdy)<b.size){
+if(Math.abs(bdx)>Math.abs(bdy)){
+this.x=b.x+(bdx>0?b.size:-b.size);
+}else{
+this.y=b.y+(bdy>0?b.size:-b.size);
+}
+}
+});
+if(dist<player.radius+this.radius){
+let dmgMult=1;
+if(this.vampiric){
+this.hp=Math.min(this.maxHp,this.hp+this.damage*dt*30);
+}
+player.takeDamage(this.damage*dt*60*dmgMult);
+}
+if(this.hasAura){
+enemies.forEach(e=>{
+if(e!==this){
+const eDist=Math.sqrt((e.x-this.x)**2+(e.y-this.y)**2);
+if(eDist<150){
+e.damage*=1.001;
+e.speed*=1.0005;
+}
+}
+});
+}
+if(player.sinFaceLightning&&dist<50){
+this.takeDamage(player.getAtk()*2*dt);
+this.stunTime=Math.max(this.stunTime,0.1);
+}
+if(player.equipment.includes('holyBlade')){
+const swordX=player.x+Math.cos(player.holyBladeAngle)*60;
+const swordY=player.y+Math.sin(player.holyBladeAngle)*60;
+const sdist=Math.sqrt((this.x-swordX)**2+(this.y-swordY)**2);
+if(sdist<this.radius+20){
+this.takeDamage(player.getAtk()*2.5*player.equipDmgMult*dt*10);
+const pushAngle=Math.atan2(this.y-player.y,this.x-player.x);
+this.x+=Math.cos(pushAngle)*5;
+this.y+=Math.sin(pushAngle)*5;
+}
+}
+}
+draw(){
+ctx.save();
+if(this.hasAura){
+ctx.beginPath();
+ctx.arc(this.x,this.y,150,0,Math.PI*2);
+ctx.fillStyle='rgba(255,215,0,0.1)';
+ctx.fill();
+ctx.strokeStyle='rgba(255,215,0,0.5)';
+ctx.lineWidth=2;
+ctx.stroke();
+}
+if(this.freezeTime>0){
+ctx.fillStyle='#87ceeb';
+}else if(this.stunTime>0){
+ctx.fillStyle='#888';
+}else{
+const gradient=ctx.createRadialGradient(this.x,this.y,0,this.x,this.y,this.radius);
+gradient.addColorStop(0,this.color);
+gradient.addColorStop(1,shadeColor(this.color,-30));
+ctx.fillStyle=gradient;
+}
+ctx.beginPath();
+ctx.arc(this.x,this.y,this.radius,0,Math.PI*2);
+ctx.fill();
+if(this.affixes.length>0){
+ctx.strokeStyle=enemyAffixes.find(a=>a.id===this.affixes[0])?.color||'#fff';
+ctx.lineWidth=3;
+ctx.stroke();
+}else{
+ctx.strokeStyle='#000';
+ctx.lineWidth=2;
+ctx.stroke();
+}
+if(this.hasShield&&this.shieldHp>0){
+ctx.strokeStyle='#4facfe';
+ctx.lineWidth=4;
+ctx.beginPath();
+ctx.arc(this.x,this.y,this.radius+5,0,Math.PI*2*(this.shieldHp/(this.maxHp*0.5)));
+ctx.stroke();
+}
+if(this.regen){
+ctx.fillStyle='#00ff00';
+ctx.beginPath();
+ctx.arc(this.x,this.y-this.radius-5,5,0,Math.PI*2);
+ctx.fill();
+}
+const hpBarWidth=this.radius*2;
+const hpBarHeight=6;
+ctx.fillStyle='#333';
+ctx.fillRect(this.x-hpBarWidth/2,this.y-this.radius-15,hpBarWidth,hpBarHeight);
+ctx.fillStyle='#e74c3c';
+ctx.fillRect(this.x-hpBarWidth/2,this.y-this.radius-15,hpBarWidth*(this.hp/this.maxHp),hpBarHeight);
+ctx.fillStyle='#fff';
+ctx.font='10px Arial';
+ctx.textAlign='center';
+ctx.fillText(this.name,this.x,this.y-this.radius-20);
+ctx.restore();
+}
+}
+let player;
+let enemies=[];
+let enemyProjectiles=[];
+let projectiles=[];
+let fists=[];
+let particles=[];
+let afterimages=[];
+let lightningEffects=[];
+let floatingTexts=[];
+let totalKills=0;
+let spawnTimer=0;
+let waveTimer=0;
+let currentWave=0;
+let levelUpChoices=[];
+let autoSelectTimer=0;
+let showingLevelUp=false;
+let bossWaveActive=false;
+function init(){
+player=new Player();
+enemies=[];
+enemyProjectiles=[];
+projectiles=[];
+fists=[];
+particles=[];
+afterimages=[];
+lightningEffects=[];
+floatingTexts=[];
+totalKills=0;
+gameTime=0;
+spawnTimer=0;
+waveTimer=0;
+currentWave=0;
+difficultyMultiplier=1;
+gameRunning=true;
+showingLevelUp=false;
+bossWaveActive=false;
+document.getElementById('deathScreen').style.display='none';
+document.getElementById('levelUp').style.display='none';
+document.getElementById('waveInfo').style.display='none';
+updateUI();
+updateEquipmentUI();
+updateBuffUI();
+}
+function calculateDifficulty(){
+const baseGrowth=1+gameTime/60;
+const expGrowth=Math.pow(1.15,gameTime/30);
+const lateGameBoost=gameTime>180?Math.pow(1.2,(gameTime-180)/60):1;
+const extremeBoost=gameTime>300?Math.pow(1.5,(gameTime-300)/60):1;
+difficultyMultiplier=baseGrowth*expGrowth*lateGameBoost*extremeBoost;
+document.getElementById('diffStat').textContent=difficultyMultiplier.toFixed(1)+'x';
+const diffPercent=Math.min(100,difficultyMultiplier*5);
+document.getElementById('difficultyFill').style.width=diffPercent+'%';
+}
+function spawnEnemies(dt){
+spawnTimer+=dt;
+calculateDifficulty();
+const baseSpawnRate=Math.max(0.1,1.5-gameTime/180);
+const spawnMult=1+Math.floor(gameTime/30)*0.5;
+if(spawnTimer>=baseSpawnRate/spawnMult){
+spawnTimer=0;
+let normalCount=Math.floor((2+gameTime/20)*spawnMult);
+normalCount=Math.min(normalCount,30);
+for(let i=0;i<normalCount;i++){
+spawnEnemy('normal');
+}
+const eliteChance=0.15+gameTime/200;
+if(Math.random()<eliteChance){
+let eliteCount=Math.floor((5+gameTime/15)*spawnMult*0.5);
+eliteCount=Math.min(eliteCount,20);
+for(let i=0;i<eliteCount;i++){
+spawnEnemy('elite');
+}
+}
+const bossChance=0.03+gameTime/400;
+if(Math.random()<bossChance){
+let bossCount=Math.floor((10+gameTime/10)*spawnMult*0.3);
+bossCount=Math.min(bossCount,15);
+for(let i=0;i<bossCount;i++){
+spawnEnemy('boss');
+}
+}
+const godBossChance=0.005+gameTime/1000;
+if(Math.random()<godBossChance){
+let godCount=Math.floor((50+gameTime/5)*spawnMult*0.2);
+godCount=Math.min(godCount,30);
+for(let i=0;i<godCount;i++){
+spawnEnemy('godBoss');
+}
+showWaveInfo('神級BOSS來襲! x'+godCount);
+}
+}
+waveTimer+=dt;
+if(waveTimer>=60){
+waveTimer=0;
+currentWave++;
+triggerWaveEvent();
+}
+if(enemies.length<5&&gameTime>10){
+for(let i=0;i<10;i++)spawnEnemy('normal');
+}
+}
+function triggerWaveEvent(){
+const eventRoll=Math.random();
+if(eventRoll<0.2){
+showWaveInfo('精英入侵!');
+for(let i=0;i<20+currentWave*5;i++)spawnEnemy('elite');
+}else if(eventRoll<0.4){
+showWaveInfo('BOSS狂潮!');
+for(let i=0;i<10+currentWave*3;i++)spawnEnemy('boss');
+}else if(eventRoll<0.5){
+showWaveInfo('神級降臨!');
+for(let i=0;i<5+currentWave*2;i++)spawnEnemy('godBoss');
+}else if(eventRoll<0.7){
+showWaveInfo('蟲群來襲!');
+for(let i=0;i<50+currentWave*10;i++)spawnEnemy('normal');
+}else{
+showWaveInfo('混沌之波!');
+for(let i=0;i<30+currentWave*5;i++){
+const types=['normal','elite','boss'];
+spawnEnemy(types[Math.floor(Math.random()*types.length)]);
+}
+}
+}
+function showWaveInfo(text){
+const waveEl=document.getElementById('waveInfo');
+waveEl.textContent=text;
+waveEl.style.display='block';
+setTimeout(()=>{waveEl.style.display='none';},3000);
+}
+function spawnEnemy(type){
+const side=Math.floor(Math.random()*4);
+let x,y;
+const margin=50+Math.random()*100;
+switch(side){
+case 0:x=Math.random()*canvas.width;y=-margin;break;
+case 1:x=canvas.width+margin;y=Math.random()*canvas.height;break;
+case 2:x=Math.random()*canvas.width;y=canvas.height+margin;break;
+case 3:x=-margin;y=Math.random()*canvas.height;break;
+}
+enemies.push(new Enemy(type,x,y));
+}
+function throwKnife(){
+const now=Date.now();
+if(now-player.lastKnifeTime>=player.knifeInterval/player.atkSpeedMult){
+player.lastKnifeTime=now;
+for(let h=0;h<player.hitCount;h++){
+setTimeout(()=>{
+let target=findClosestEnemy(player.x,player.y);
+if(target){
+projectiles.push({type:'knife',x:player.x,y:player.y,target:target,damage:player.getAtk()*0.95,speed:15,life:5});
+}
+},h*100);
+}
+}
+}
+function findClosestEnemy(x,y){
+let closest=null;
+let minDist=Infinity;
+enemies.forEach(e=>{
+const dist=Math.sqrt((e.x-x)**2+(e.y-y)**2);
+if(dist<minDist){
+minDist=dist;
+closest=e;
+}
+});
+return closest;
+}
+function updateProjectiles(dt){
+projectiles=projectiles.filter(p=>{
+p.life-=dt;
+if(p.life<=0)return false;
+if(p.type==='knife'||p.type==='shuriken'){
+if(p.target&&enemies.includes(p.target)){
+const dx=p.target.x-p.x;
+const dy=p.target.y-p.y;
+const dist=Math.sqrt(dx*dx+dy*dy);
+if(dist>0){
+p.x+=dx/dist*p.speed;
+p.y+=dy/dist*p.speed;
+}
+if(dist<p.target.radius+10){
+if(player.activeBuffs.windThunder&&Math.random()<0.2){
+p.target.slowTime=3;
+p.target.slowAmount=0.1;
+}
+p.target.takeDamage(p.damage);
+return false;
+}
+}else{
+p.target=findClosestEnemy(p.x,p.y);
+}
+if(p.type==='shuriken')p.angle+=0.3;
+}else if(p.type==='rasengan'){
+p.x+=p.vx*3;
+p.y+=p.vy*3;
+enemies.forEach(e=>{
+const dx=p.x-e.x;
+const dy=p.y-e.y;
+const dist=Math.sqrt(dx*dx+dy*dy);
+if(dist<150){
+e.x+=(p.x-e.x)*0.05;
+e.y+=(p.y-e.y)*0.05;
+}
+if(dist<p.radius+e.radius)e.takeDamage(p.damage*dt);
+});
+if(p.life<=0){
+enemies.forEach(e=>{
+const dist=Math.sqrt((p.x-e.x)**2+(p.y-e.y)**2);
+if(dist<200)e.takeDamage(p.damage*3);
+});
+for(let i=0;i<20;i++){
+particles.push({x:p.x,y:p.y,vx:(Math.random()-0.5)*15,vy:(Math.random()-0.5)*15,life:0.5,color:'#00bfff',size:8});
+}
+}
+}else if(p.type==='ice'){
+p.x+=p.vx;
+p.y+=p.vy;
+for(let i=enemies.length-1;i>=0;i--){
+const e=enemies[i];
+const dist=Math.sqrt((p.x-e.x)**2+(p.y-e.y)**2);
+if(dist<e.radius+10){
+e.takeDamage(p.damage);
+e.freezeTime=p.freezeTime;
+p.life=0;
+break;
+}
+}
+}else if(p.type==='blackSword'){
+p.x+=p.vx;
+p.y+=p.vy;
+for(let i=enemies.length-1;i>=0;i--){
+const e=enemies[i];
+const dist=Math.sqrt((p.x-e.x)**2+(p.y-e.y)**2);
+if(dist<e.radius+15){
+e.takeDamage(p.damage);
+if(p.globalDmg){
+enemies.forEach(en=>{
+en.hp-=en.maxHp*0.05;
+if(en.hp<=0)en.die();
+});
+createFloatingText(p.x,p.y,'全場-5%HP!','#ff0000');
+}
+p.life=0;
+break;
+}
+}
+}
+return p.x>-100&&p.x<canvas.width+100&&p.y>-100&&p.y<canvas.height+100;
+});
+enemyProjectiles=enemyProjectiles.filter(ep=>{
+ep.life-=dt;
+ep.x+=ep.vx;
+ep.y+=ep.vy;
+const dist=Math.sqrt((ep.x-player.x)**2+(ep.y-player.y)**2);
+if(dist<player.radius+5){
+player.takeDamage(ep.damage);
+return false;
+}
+return ep.life>0&&ep.x>-50&&ep.x<canvas.width+50&&ep.y>-50&&ep.y<canvas.height+50;
+});
+}
+function updateFists(dt){
+fists=fists.filter(f=>{
+f.life-=dt;
+if(f.life<=0)return false;
+f.x+=f.vx;
+f.y+=f.vy;
+if(f.x<30||f.x>canvas.width-30){f.vx*=-1;f.x=Math.max(30,Math.min(canvas.width-30,f.x));}
+if(f.y<30||f.y>canvas.height-30){f.vy*=-1;f.y=Math.max(30,Math.min(canvas.height-30,f.y));}
+enemies.forEach(e=>{
+const dist=Math.sqrt((f.x-e.x)**2+(f.y-e.y)**2);
+if(dist<e.radius+25){
+e.takeDamage(f.damage*dt*10);
+f.vx*=-1;
+f.vy*=-1;
+}
+});
+return true;
+});
+}
+function updateParticles(dt){
+particles=particles.filter(p=>{
+p.life-=dt;
+p.x+=p.vx;
+p.y+=p.vy;
+p.vx*=0.95;
+p.vy*=0.95;
+return p.life>0;
+});
+afterimages=afterimages.filter(a=>{
+a.alpha-=dt*2;
+return a.alpha>0;
+});
+lightningEffects=lightningEffects.filter(l=>{
+l.life-=dt;
+return l.life>0;
+});
+floatingTexts=floatingTexts.filter(t=>{
+t.life-=dt;
+t.y-=50*dt;
+return t.life>0;
+});
+}
+function createFloatingText(x,y,text,color,isCrit=false){
+floatingTexts.push({x,y,text,color,life:1,isCrit});
+}
+function drawProjectiles(){
+projectiles.forEach(p=>{
+ctx.save();
+if(p.type==='knife'){
+ctx.fillStyle='#c0c0c0';
+ctx.translate(p.x,p.y);
+const angle=p.target?Math.atan2(p.target.y-p.y,p.target.x-p.x):0;
+ctx.rotate(angle);
+ctx.beginPath();
+ctx.moveTo(15,0);
+ctx.lineTo(-5,-5);
+ctx.lineTo(-5,5);
+ctx.closePath();
+ctx.fill();
+}else if(p.type==='shuriken'){
+ctx.translate(p.x,p.y);
+ctx.rotate(p.angle);
+ctx.fillStyle='#00ff00';
+for(let i=0;i<4;i++){
+ctx.rotate(Math.PI/2);
+ctx.beginPath();
+ctx.moveTo(0,-3);
+ctx.lineTo(15,0);
+ctx.lineTo(0,3);
+ctx.closePath();
+ctx.fill();
+}
+}else if(p.type==='rasengan'){
+const gradient=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,p.radius);
+gradient.addColorStop(0,'#ffffff');
+gradient.addColorStop(0.5,'#00bfff');
+gradient.addColorStop(1,'rgba(0,191,255,0.3)');
+ctx.fillStyle=gradient;
+ctx.beginPath();
+ctx.arc(p.x,p.y,p.radius+Math.sin(Date.now()*0.02)*5,0,Math.PI*2);
+ctx.fill();
+}else if(p.type==='ice'){
+ctx.fillStyle='#87ceeb';
+ctx.shadowColor='#00ffff';
+ctx.shadowBlur=10;
+ctx.beginPath();
+ctx.arc(p.x,p.y,8,0,Math.PI*2);
+ctx.fill();
+}else if(p.type==='blackSword'){
+ctx.fillStyle='#1a1a1a';
+ctx.translate(p.x,p.y);
+ctx.rotate(Math.atan2(p.vy,p.vx));
+ctx.beginPath();
+ctx.moveTo(20,0);
+ctx.lineTo(-10,-4);
+ctx.lineTo(-10,4);
+ctx.closePath();
+ctx.fill();
+}
+ctx.restore();
+});
+enemyProjectiles.forEach(ep=>{
+ctx.fillStyle=ep.color||'#ff0000';
+ctx.beginPath();
+ctx.arc(ep.x,ep.y,8,0,Math.PI*2);
+ctx.fill();
+});
+}
+function drawFists(){
+fists.forEach(f=>{
+ctx.save();
+ctx.translate(f.x,f.y);
+ctx.fillStyle='#ff4500';
+ctx.shadowColor='#ff0000';
+ctx.shadowBlur=15;
+ctx.beginPath();
+ctx.arc(0,0,25,0,Math.PI*2);
+ctx.fill();
+ctx.restore();
+});
+}
+function drawParticles(){
+particles.forEach(p=>{
+ctx.globalAlpha=p.life;
+ctx.fillStyle=p.color;
+ctx.beginPath();
+ctx.arc(p.x,p.y,p.size*p.life,0,Math.PI*2);
+ctx.fill();
+});
+ctx.globalAlpha=1;
+afterimages.forEach(a=>{
+ctx.globalAlpha=a.alpha;
+ctx.fillStyle=a.color;
+ctx.beginPath();
+ctx.arc(a.x,a.y,player.radius,0,Math.PI*2);
+ctx.fill();
+});
+ctx.globalAlpha=1;
+lightningEffects.forEach(l=>{
+ctx.strokeStyle=`rgba(0,255,255,${l.life*2})`;
+ctx.lineWidth=3;
+ctx.beginPath();
+ctx.moveTo(l.x-20,l.y);
+for(let i=1;i<=5;i++){
+ctx.lineTo(l.x-20+40*(i/5),l.y+(Math.random()-0.5)*20);
+}
+ctx.stroke();
+});
+floatingTexts.forEach(t=>{
+ctx.globalAlpha=t.life;
+ctx.fillStyle=t.color;
+ctx.font=t.isCrit?'bold 24px Arial':'bold 16px Arial';
+ctx.textAlign='center';
+ctx.fillText(t.text,t.x,t.y);
+});
+ctx.globalAlpha=1;
+}
+function drawVortexes(){
+player.vortexes.forEach(v=>{
+ctx.save();
+ctx.translate(v.x,v.y);
+ctx.strokeStyle='#4169e1';
+ctx.lineWidth=3;
+for(let i=0;i<5;i++){
+ctx.globalAlpha=0.3+i*0.1;
+ctx.beginPath();
+ctx.arc(0,0,v.radius-i*10,Date.now()*0.005+i,Date.now()*0.005+i+Math.PI*1.5);
+ctx.stroke();
+}
+ctx.restore();
+});
+ctx.globalAlpha=1;
+player.lingXuanBarriers.forEach(b=>{
+ctx.strokeStyle='#ffd700';
+ctx.lineWidth=4;
+ctx.globalAlpha=b.life/2;
+ctx.strokeRect(b.x-b.size,b.y-b.size,b.size*2,b.size*2);
+});
+ctx.globalAlpha=1;
+}
+function showLevelUpChoices(){
+showingLevelUp=true;
+isPaused=true;
+const available=[...allBuffOptions];
+levelUpChoices=[];
+for(let i=0;i<3&&available.length>0;i++){
+const idx=Math.floor(Math.random()*available.length);
+levelUpChoices.push(available.splice(idx,1)[0]);
+}
+const container=document.getElementById('buffChoices');
+container.innerHTML='';
+levelUpChoices.forEach((buff,i)=>{
+const div=document.createElement('div');
+div.className='buffChoice';
+div.innerHTML=`<strong>${buff.name}</strong><br><small>${buff.desc}</small>`;
+div.onclick=()=>selectBuff(i);
+container.appendChild(div);
+});
+document.getElementById('levelUp').style.display='block';
+autoSelectTimer=2.5;
+}
+function selectBuff(index){
+if(!showingLevelUp)return;
+levelUpChoices[index].apply(player);
+document.getElementById('levelUp').style.display='none';
+showingLevelUp=false;
+isPaused=false;
+updateUI();
+}
+function updateAutoSelect(dt){
+if(!showingLevelUp)return;
+autoSelectTimer-=dt;
+document.getElementById('autoTimer').textContent=autoSelectTimer.toFixed(1);
+if(autoSelectTimer<=0){
+selectBuff(Math.floor(Math.random()*levelUpChoices.length));
+}
+}
+function updateUI(){
+document.getElementById('levelDisplay').textContent=`LV.${player.level}`;
+const hpPercent=(player.hp/player.maxHp)*100;
+document.getElementById('healthFill').style.width=`${hpPercent}%`;
+const shieldPercent=Math.min(100,(player.shield/player.maxHp)*100);
+document.getElementById('shieldFill').style.width=`${shieldPercent}%`;
+document.getElementById('healthText').textContent=`HP: ${Math.floor(player.hp)} / ${Math.floor(player.maxHp)}${player.shield>0?' (+'+Math.floor(player.shield)+')':''}`;
+const expPercent=(player.exp/player.expToLevel)*100;
+document.getElementById('expFill').style.width=`${expPercent}%`;
+document.getElementById('expText').textContent=`EXP: ${Math.floor(player.exp)} / ${player.expToLevel}`;
+document.getElementById('atkStat').textContent=Math.floor(player.getAtk());
+document.getElementById('defStat').textContent=Math.floor(player.getDef());
+document.getElementById('critStat').textContent=`${(player.critRate*100).toFixed(1)}%`;
+document.getElementById('spdStat').textContent=`${Math.floor(player.getSpeed()/5*100)}%`;
+document.getElementById('hitStat').textContent=player.hitCount;
+document.getElementById('equipStat').textContent=`${Math.floor((player.equipDmgMult-1)*100)}%`;
+document.getElementById('expBonus').textContent=`${Math.floor((player.expMult-1)*100)}%`;
+if(player.skillCD>0){
+document.getElementById('skillCDText').textContent=`冷卻: ${player.skillCD.toFixed(1)}s`;
+}else{
+document.getElementById('skillCDText').textContent='就緒';
+}
+document.getElementById('timer').textContent=`時間: ${formatTime(gameTime)} | 波次: ${currentWave+1}`;
+document.getElementById('enemyCount').textContent=`敵人: ${enemies.length}`;
+}
+function updateEquipmentUI(){
+const container=document.getElementById('equipment');
+container.innerHTML='';
+player.equipment.forEach(eqId=>{
+const eq=equipmentList.find(e=>e.id===eqId);
+if(eq){
+const div=document.createElement('div');
+div.className='equip';
+div.style.borderColor=eq.color;
+div.style.color=eq.color;
+div.textContent=eq.name;
+container.appendChild(div);
+}
+});
+}
+function updateBuffUI(){
+const container=document.getElementById('buffs');
+container.innerHTML='';
+for(let id in player.activeBuffs){
+const buff=buffDropList.find(b=>b.id===id);
+if(buff){
+const div=document.createElement('div');
+div.className='buff';
+div.style.borderColor=buff.color;
+div.style.color=buff.color;
+div.textContent=`${buff.name} ${player.activeBuffs[id].toFixed(1)}s`;
+container.appendChild(div);
+}
+}
+if(player.lifeStoneTimer>0){
+const div=document.createElement('div');
+div.className='buff';
+div.style.borderColor='#ff00ff';
+div.style.color='#ff00ff';
+div.textContent=`生死之碑 ${player.lifeStoneTimer.toFixed(0)}s`;
+container.appendChild(div);
+}
+if(player.timeRingBuffTimer>0){
+const div=document.createElement('div');
+div.className='buff';
+div.style.borderColor='#ffd700';
+div.style.color='#ffd700';
+div.textContent=`時之指戒 ${player.timeRingBuffTimer.toFixed(1)}s`;
+container.appendChild(div);
+}
+}
+function formatTime(seconds){
+const mins=Math.floor(seconds/60);
+const secs=Math.floor(seconds%60);
+return `${mins.toString().padStart(2,'0')}:${secs.toString().padStart(2,'0')}`;
+}
+function shadeColor(color,percent){
+const num=parseInt(color.replace('#',''),16);
+const amt=Math.round(2.55*percent);
+const R=Math.max(0,Math.min(255,(num>>16)+amt));
+const G=Math.max(0,Math.min(255,(num>>8&0x00FF)+amt));
+const B=Math.max(0,Math.min(255,(num&0x0000FF)+amt));
+return `#${(0x1000000+R*0x10000+G*0x100+B).toString(16).slice(1)}`;
+}
+function saveGame(){
+const saveData={
+carryOverStats,
+player:{
+level:player.level,
+exp:player.exp,
+expToLevel:player.expToLevel,
+hp:player.hp,
+maxHp:player.maxHp,
+atk:player.atk,
+def:player.def,
+atkMult:player.atkMult,
+speedMult:player.speedMult,
+hitCount:player.hitCount,
+equipDmgMult:player.equipDmgMult,
+atkSpeedMult:player.atkSpeedMult,
+expMult:player.expMult,
+defMult:player.defMult,
+gainedAtk:player.gainedAtk,
+gainedHp:player.gainedHp,
+gainedDef:player.gainedDef,
+equipment:player.equipment,
+hasLifeStone:player.hasLifeStone,
+lifeStoneUsed:player.lifeStoneUsed
+},
+gameTime,
+totalKills,
+currentWave,
+difficultyMultiplier
+};
+localStorage.setItem('roguelikeIdleSave',JSON.stringify(saveData));
+createFloatingText(canvas.width/2,canvas.height/2,'遊戲已存檔!','#00ff00');
+}
+function loadGame(){
+const saveStr=localStorage.getItem('roguelikeIdleSave');
+if(!saveStr){
+createFloatingText(canvas.width/2,canvas.height/2,'沒有存檔!','#ff0000');
+return;
+}
+const saveData=JSON.parse(saveStr);
+carryOverStats=saveData.carryOverStats;
+init();
+Object.assign(player,saveData.player);
+gameTime=saveData.gameTime;
+totalKills=saveData.totalKills;
+currentWave=saveData.currentWave||0;
+difficultyMultiplier=saveData.difficultyMultiplier||1;
+updateUI();
+updateEquipmentUI();
+createFloatingText(canvas.width/2,canvas.height/2,'存檔已載入!','#00ff00');
+}
+function restartGame(){
+init();
+}
+let lastTime=0;
+function gameLoop(timestamp){
+const dt=Math.min((timestamp-lastTime)/1000,0.1);
+lastTime=timestamp;
+if(gameRunning&&!isPaused){
+gameTime+=dt;
+player.update(dt);
+spawnEnemies(dt);
+for(let i=enemies.length-1;i>=0;i--){
+enemies[i].update(dt);
+}
+throwKnife();
+updateProjectiles(dt);
+updateFists(dt);
+updateParticles(dt);
+}
+if(showingLevelUp){
+updateAutoSelect(dt);
+}
+ctx.clearRect(0,0,canvas.width,canvas.height);
+drawVortexes();
+for(let i=0;i<enemies.length;i++){
+enemies[i].draw();
+}
+player.draw();
+drawProjectiles();
+drawFists();
+drawParticles();
+updateUI();
+updateBuffUI();
+requestAnimationFrame(gameLoop);
+}
+document.addEventListener('keydown',e=>{
+keys[e.key.toLowerCase()]=true;
+if(e.key.toLowerCase()==='k'){
+player.useSkill();
+}
+});
+document.addEventListener('keyup',e=>{
+keys[e.key.toLowerCase()]=false;
+});
+init();
+requestAnimationFrame(gameLoop);
+</script>
+</body>
+</html>
+```
